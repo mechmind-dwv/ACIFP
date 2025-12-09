@@ -1,25 +1,30 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { AlertTriangle, Pill, Search, Plus, X, Heart } from 'lucide-react'
+import { AlertTriangle, Pill, Search, Plus, X, AlertCircle, Clock, Users, Activity, Shield, ChevronDown, ChevronUp, Filter, Zap, Database, CheckCircle, XCircle, Info, Stethoscope, Heart, Kidney, Brain, Target } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Separator } from '@/components/ui/separator'
+
+interface Medicamento {
+  id: string
+  nombreGenerico: string
+  nombreComercial?: string
+  codigoAtc?: string
+  grupoTerapeutico?: string
+  rutaMetabolica?: string
+}
 
 interface Patologia {
   id: string
   nombre: string
   descripcion?: string
   categoria?: string
-}
-
-interface Medicamento {
-  id: string
-  nombreGenerico: string
-  nombreComercial?: string
 }
 
 interface Interaccion {
@@ -71,19 +76,9 @@ export default function Home() {
   const [patologiasSeleccionadas, setPatologiasSeleccionadas] = useState<Patologia[]>([])
   const [patologiasDisponibles, setPatologiasDisponibles] = useState<Patologia[]>([])
   const [isLoading, setIsLoading] = useState(false)
-
-  const medicamentosEjemplo: Medicamento[] = [
-    { id: '1', nombreGenerico: 'Warfarina', nombreComercial: 'Coumadin' },
-    { id: '2', nombreGenerico: 'Sertralina', nombreComercial: 'Zoloft' },
-    { id: '3', nombreGenerico: 'Paracetamol', nombreComercial: 'Tylenol' },
-    { id: '4', nombreGenerico: 'Ibuprofeno', nombreComercial: 'Advil' },
-    { id: '5', nombreGenerico: 'Aspirina', nombreComercial: 'Aspirin' },
-    { id: '6', nombreGenerico: 'Lisinopril', nombreComercial: 'Zestril' },
-    { id: '7', nombreGenerico: 'Metformina', nombreComercial: 'Glucophage' },
-    { id: '8', nombreGenerico: 'Omeprazol', nombreComercial: 'Prilosec' },
-    { id: '9', nombreGenerico: 'Simvastatina', nombreComercial: 'Zocor' },
-    { id: '10', nombreGenerico: 'Amlodipino', nombreComercial: 'Norvasc' }
-  ]
+  const [isSearching, setIsSearching] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
 
   // Cargar patologías disponibles al montar el componente
   useEffect(() => {
@@ -101,18 +96,34 @@ export default function Home() {
     cargarPatologias()
   }, [])
 
-  const handleBusquedaMedicamento = (query: string) => {
+  // Búsqueda inteligente de medicamentos
+  const handleBusquedaMedicamento = useCallback(async (query: string) => {
     setMedicamentoBusqueda(query)
+    
     if (query.length > 2) {
-      const filtrados = medicamentosEjemplo.filter(med => 
-        med.nombreGenerico.toLowerCase().includes(query.toLowerCase()) ||
-        med.nombreComercial?.toLowerCase().includes(query.toLowerCase())
-      )
-      setMedicamentosDisponibles(filtrados)
+      setIsSearching(true)
+      try {
+        const response = await fetch('/api/medicamentos/busqueda', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query, limit: 8 })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setMedicamentosDisponibles(data.medicamentos)
+        }
+      } catch (error) {
+        console.error('Error al buscar medicamentos:', error)
+      } finally {
+        setIsSearching(false)
+      }
     } else {
       setMedicamentosDisponibles([])
     }
-  }
+  }, [])
 
   const agregarMedicamento = (medicamento: Medicamento) => {
     if (!medicamentosSeleccionados.find(m => m.id === medicamento.id)) {
@@ -207,9 +218,72 @@ export default function Home() {
     }
   }
 
+  const getTipoManejoIcon = (tipo: string) => {
+    switch (tipo) {
+      case 'EVITAR_ABSOLUTAMENTE':
+        return <XCircle className="w-4 h-4 text-red-600" />
+      case 'AJUSTE_DOSIS':
+        return <Activity className="w-4 h-4 text-yellow-600" />
+      case 'MONITORIZACION_CERCANA':
+        return <Clock className="w-4 h-4 text-orange-600" />
+      case 'ESPACIAR_ADMINISTRACION':
+        return <Clock className="w-4 h-4 text-blue-600" />
+      case 'EDUCAR_PACIENTE':
+        return <Users className="w-4 h-4 text-green-600" />
+      case 'CONSULTAR_ESPECIALISTA':
+        return <Stethoscope className="w-4 h-4 text-purple-600" />
+      default:
+        return <Info className="w-4 h-4" />
+    }
+  }
+
+  const getPrioridadColor = (prioridad: string) => {
+    switch (prioridad) {
+      case 'URGENTE':
+        return 'bg-red-600 text-white'
+      case 'IMPORTANTE':
+        return 'bg-yellow-600 text-white'
+      case 'INFORMATIVO':
+        return 'bg-blue-600 text-white'
+      default:
+        return 'bg-gray-600 text-white'
+    }
+  }
+
+  const getPatologiaIcon = (categoria?: string) => {
+    switch (categoria?.toLowerCase()) {
+      case 'renal':
+        return <Kidney className="w-4 h-4 text-blue-600" />
+      case 'cardiovascular':
+        return <Heart className="w-4 h-4 text-red-600" />
+      case 'hepático':
+        return <Brain className="w-4 h-4 text-purple-600" />
+      default:
+        return <Shield className="w-4 h-4 text-gray-600" />
+    }
+  }
+
+  // Obtener el riesgo más alto para el banner de alerta
+  const highestRisk = interacciones.find(i => i.gravedad === 'ALTA_MAYOR')
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
+        {/* Banner de Alerta de Riesgo Máximo */}
+        {highestRisk && (
+          <div className="mb-6 p-4 bg-red-600 text-white rounded-lg shadow-lg border-2 border-red-700 animate-pulse">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-6 h-6" />
+              <div>
+                <h2 className="text-xl font-bold">🚨 RIESGO MÁXIMO DETECTADO</h2>
+                <p className="text-red-100">
+                  {highestRisk.medicamentoA.nombreGenerico} + {highestRisk.medicamentoB.nombreGenerico} - {highestRisk.consecuenciaPotencial}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-8 pt-8">
           <div className="flex items-center justify-center gap-3 mb-4">
@@ -224,72 +298,184 @@ export default function Home() {
             Artefacto Web de Correlación de Interacciones Farmacológicas y Patologías
           </p>
           <p className="text-gray-500 max-w-2xl mx-auto">
-            Sistema de soporte a la decisión clínica para alertar sobre riesgos de desarrollar patologías 
-            específicas resultantes de la mezcla de medicamentos.
+            Sistema de soporte a la decisión clínica con clasificación de gravedad rigurosa y recomendaciones prescriptivas
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid lg:grid-cols-3 gap-6">
           {/* Panel Izquierdo - Entrada de Datos */}
-          <Card>
+          <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Search className="w-5 h-5" />
-                Análisis de Medicamentos
+                <Target className="w-5 h-5" />
+                Análisis de Polifarmacia
               </CardTitle>
               <CardDescription>
-                Ingrese los medicamentos que el paciente está tomando
+                Ingrese los medicamentos y condiciones del paciente para análisis completo
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Búsqueda de Medicamentos */}
-              <div className="relative">
-                <Input
-                  placeholder="Buscar medicamento (ej: Warfarina, Paracetamol)..."
-                  value={medicamentoBusqueda}
-                  onChange={(e) => handleBusquedaMedicamento(e.target.value)}
-                  className="w-full"
-                />
-                {medicamentosDisponibles.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                    {medicamentosDisponibles.map((med) => (
+            <CardContent className="space-y-6">
+              {/* Búsqueda de Medicamentos Mejorada */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-gray-700">
+                  🔍 Búsqueda Inteligente de Medicamentos
+                </label>
+                <div className="relative">
+                  <Input
+                    placeholder="Escriba nombre genérico, comercial o código ATC..."
+                    value={medicamentoBusqueda}
+                    onChange={(e) => handleBusquedaMedicamento(e.target.value)}
+                    className="w-full pr-10"
+                  />
+                  {isSearching && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-r-2 border-blue-600"></div>
+                    </div>
+                  )}
+                  {medicamentosDisponibles.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-64 overflow-y-auto">
+                      {medicamentosDisponibles.map((med) => (
+                        <div
+                          key={med.id}
+                          onClick={() => agregarMedicamento(med)}
+                          className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium text-gray-900">{med.nombreGenerico}</div>
+                              {med.nombreComercial && (
+                                <div className="text-sm text-gray-500">{med.nombreComercial}</div>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              {med.codigoAtc && (
+                                <Badge variant="outline" className="text-xs">
+                                  {med.codigoAtc}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Medicamentos Seleccionados */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700">
+                    💊 Medicamentos Seleccionados ({medicamentosSeleccionados.length})
+                  </label>
+                  {medicamentosSeleccionados.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setMedicamentosSeleccionados([])}
+                    >
+                      Limpiar
+                    </Button>
+                  )}
+                </div>
+                {medicamentosSeleccionados.length === 0 ? (
+                  <p className="text-sm text-gray-500 italic">No hay medicamentos seleccionados</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {medicamentosSeleccionados.map((med) => (
                       <div
                         key={med.id}
-                        onClick={() => agregarMedicamento(med)}
-                        className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                        className="group relative"
                       >
-                        <div className="font-medium">{med.nombreGenerico}</div>
-                        {med.nombreComercial && (
-                          <div className="text-sm text-gray-500">{med.nombreComercial}</div>
-                        )}
+                        <Badge
+                          variant="secondary"
+                          className="flex items-center gap-1 pr-1 bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
+                        >
+                          {med.nombreGenerico}
+                          <button
+                            onClick={() => removerMedicamento(med.id)}
+                            className="ml-1 hover:bg-blue-300 rounded-full p-0.5 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* Medicamentos Seleccionados */}
-              <div className="space-y-2">
-                <h3 className="font-medium text-sm text-gray-700">Medicamentos Seleccionados:</h3>
-                {medicamentosSeleccionados.length === 0 ? (
-                  <p className="text-sm text-gray-500 italic">No hay medicamentos seleccionados</p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {medicamentosSeleccionados.map((med) => (
-                      <Badge
-                        key={med.id}
-                        variant="secondary"
-                        className="flex items-center gap-1 pr-1"
-                      >
-                        {med.nombreGenerico}
-                        <button
-                          onClick={() => removerMedicamento(med.id)}
-                          className="ml-1 hover:bg-gray-200 rounded-full p-0.5"
+              {/* Patologías Preexistentes */}
+              <div className="space-y-3">
+                <Collapsible open={showFilters} onOpenChange={setShowFilters}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      <div className="flex items-center gap-2">
+                        <Heart className="w-4 h-4" />
+                        Patologías Preexistentes ({patologiasSeleccionadas.length})
+                      </div>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-3 mt-3">
+                    <div className="grid gap-2">
+                      {patologiasDisponibles.map((patologia) => (
+                        <div
+                          key={patologia.id}
+                          onClick={() => {
+                            const isSelected = patologiasSeleccionadas.find(p => p.id === patologia.id)
+                            if (isSelected) {
+                              removerPatologia(patologia.id)
+                            } else {
+                              agregarPatologia(patologia)
+                            }
+                          }}
+                          className="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
                         >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </Badge>
-                    ))}
+                          <Checkbox
+                            checked={!!patologiasSeleccionadas.find(p => p.id === patologia.id)}
+                            onChange={() => {}}
+                          />
+                          <div className="flex items-center gap-2 flex-1">
+                            {getPatologiaIcon(patologia.categoria)}
+                            <div>
+                              <div className="font-medium text-gray-900">{patologia.nombre}</div>
+                              {patologia.categoria && (
+                                <Badge variant="outline" className="text-xs ml-2">
+                                  {patologia.categoria}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {patologiasSeleccionadas.length > 0 && (
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm font-medium text-blue-800 mb-2">
+                      Patologías seleccionadas para personalización de riesgo:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {patologiasSeleccionadas.map((patologia) => (
+                        <Badge
+                          key={patologia.id}
+                          variant="secondary"
+                          className="flex items-center gap-1 pr-1 bg-blue-100 text-blue-800"
+                        >
+                          {getPatologiaIcon(patologia.categoria)}
+                          {patologia.nombre}
+                          <button
+                            onClick={() => removerPatologia(patologia.id)}
+                            className="ml-1 hover:bg-blue-200 rounded-full p-0.5"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -298,143 +484,90 @@ export default function Home() {
               <Button
                 onClick={analizarInteracciones}
                 disabled={medicamentosSeleccionados.length < 2 || isLoading}
-                className="w-full"
+                className="w-full h-12 text-lg font-semibold"
+                size="lg"
               >
-                {isLoading ? 'Analizando...' : 'Analizar Interacciones'}
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-r-2 border-white"></div>
+                    Analizando Interacciones...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-5 h-5" />
+                    Analizar Interacciones Farmacológicas
+                  </div>
+                )}
               </Button>
             </CardContent>
           </Card>
 
-          {/* Sección de Patologías Preexistentes */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Heart className="w-5 h-5" />
-                Patologías Preexistentes
-              </CardTitle>
-              <CardDescription>
-                Seleccione condiciones médicas preexistentes para personalizar el análisis de riesgo
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {patologiasDisponibles.length === 0 ? (
-                <p className="text-sm text-gray-500 italic">Cargando patologías disponibles...</p>
-              ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {patologiasDisponibles.map((patologia) => (
-                    <div
-                      key={patologia.id}
-                      className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                      onClick={() => {
-                        const isSelected = patologiasSeleccionadas.find(p => p.id === patologia.id)
-                        if (isSelected) {
-                          removerPatologia(patologia.id)
-                        } else {
-                          agregarPatologia(patologia)
-                        }
-                      }}
-                    >
-                      <Checkbox
-                        checked={!!patologiasSeleccionadas.find(p => p.id === patologia.id)}
-                        onChange={() => {}}
-                      />
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">{patologia.nombre}</div>
-                        {patologia.categoria && (
-                          <Badge variant="outline" className="text-xs mt-1">
-                            {patologia.categoria}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {patologiasSeleccionadas.length > 0 && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm font-medium text-blue-800 mb-2">
-                    Patologías seleccionadas ({patologiasSeleccionadas.length}):
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {patologiasSeleccionadas.map((patologia) => (
-                      <Badge
-                        key={patologia.id}
-                        variant="secondary"
-                        className="flex items-center gap-1 pr-1 bg-blue-100 text-blue-800"
-                      >
-                        {patologia.nombre}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            removerPatologia(patologia.id)
-                          }}
-                          className="ml-1 hover:bg-blue-200 rounded-full p-0.5"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Panel Derecho - Resultados */}
+          {/* Panel Derecho - Resumen de Riesgo Priorizado */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5" />
-                Resultados del Análisis
+                <Activity className="w-5 h-5" />
+                Resumen de Riesgo
               </CardTitle>
               <CardDescription>
-                Interacciones farmacológicas detectadas y sus correlaciones patológicas
+                Interacciones detectadas ordenadas por gravedad clínica
               </CardDescription>
             </CardHeader>
             <CardContent>
               {interacciones.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  <AlertTriangle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <Database className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>No hay interacciones para mostrar</p>
-                  <p className="text-sm">Seleccione al menos 2 medicamentos y haga clic en "Analizar Interacciones"</p>
+                  <p className="text-sm">
+                    Seleccione al menos 2 medicamentos y haga clic en "Analizar Interacciones"
+                  </p>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {interacciones.map((interaccion) => (
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {interacciones.map((interaccion, index) => (
                     <div
                       key={interaccion.id}
-                      className={`p-4 rounded-lg border ${getGravedadColor(interaccion.gravedad)}`}
+                      className={`p-4 rounded-lg border ${getGravedadColor(interaccion.gravedad)} ${
+                        index === 0 ? 'ring-2 ring-offset-2 ring-red-500' : ''
+                      }`}
                     >
-                      <div className="flex items-start justify-between mb-2">
+                      {/* Encabezado de la interacción */}
+                      <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
                           {getGravedadIcon(interaccion.gravedad)}
-                          <span className="font-semibold text-sm">
-                            {interaccion.medicamentoA.nombreGenerico} + {interaccion.medicamentoB.nombreGenerico}
-                          </span>
+                          <div>
+                            <div className="font-semibold text-sm">
+                              {interaccion.medicamentoA.nombreGenerico} + {interaccion.medicamentoB.nombreGenerico}
+                            </div>
+                            <div className="text-xs opacity-75">
+                              {interaccion.medicamentoA.nombreComercial && `${interaccion.medicamentoA.nombreComercial} + `} + 
+                              {interaccion.medicamentoB.nombreComercial && `${interaccion.medicamentoB.nombreComercial}`}
+                            </div>
+                          </div>
                         </div>
                         <Badge variant="outline" className="text-xs">
                           {getGravedadLabel(interaccion.gravedad)}
                         </Badge>
                       </div>
-                      
+
+                      {/* Información clínica esencial */}
                       <div className="space-y-2 text-sm">
                         <div>
-                          <strong>Consecuencia Clínica:</strong> {interaccion.consecuenciaPotencial}
+                          <strong>⚠️ Consecuencia Clínica:</strong> {interaccion.consecuenciaPotencial}
                         </div>
                         
                         <div>
-                          <strong>Mecanismo:</strong> {interaccion.mecanismoAccion}
+                          <strong>🔬 Mecanismo:</strong> {interaccion.mecanismoAccion}
                         </div>
 
                         <div>
-                          <strong>Efecto Farmacológico:</strong> {interaccion.accionResultante}
+                          <strong>💊 Efecto Farmacológico:</strong> {interaccion.accionResultante}
                         </div>
 
-                        {/* Evidencia Científica */}
+                        {/* Evidencia científica */}
                         {interaccion.nivelEvidencia && (
                           <div className="mt-2 p-2 bg-purple-50 rounded border border-purple-200">
-                            <strong className="text-purple-800">Nivel de Evidencia:</strong>
+                            <strong className="text-purple-800">📚 Nivel de Evidencia:</strong>
                             <div className="text-xs mt-1">
                               <span className={`px-2 py-1 rounded text-xs font-medium ${
                                 interaccion.nivelEvidencia === 'ENSAYO_CLINICO' ? 'bg-purple-600 text-white' :
@@ -451,10 +584,10 @@ export default function Home() {
                           </div>
                         )}
 
-                        {/* Patologías Correlacionadas */}
+                        {/* Patologías correlacionadas */}
                         {interaccion.patologiasCorrelacionadas.length > 0 && (
                           <div className="mt-3 p-2 bg-orange-50 rounded border border-orange-200">
-                            <strong className="text-orange-800">Patología Correlacionada:</strong>
+                            <strong className="text-orange-800">🏥 Patología Correlacionada:</strong>
                             {interaccion.patologiasCorrelacionadas.map((patologia, index) => (
                               <div key={index} className="mt-1 text-xs">
                                 <div className="font-medium text-orange-700">{patologia.nombrePatologia}</div>
@@ -473,41 +606,34 @@ export default function Home() {
                           </div>
                         )}
 
-                        {/* Recomendaciones Clínicas Prescriptivas */}
+                        {/* Recomendaciones clínicas prescriptivas */}
                         {interaccion.recomendaciones.length > 0 && (
                           <div className="mt-3 p-2 bg-blue-50 rounded border border-blue-200">
-                            <strong className="text-blue-800">Recomendaciones Clínicas:</strong>
+                            <strong className="text-blue-800">📋 Recomendaciones Clínicas:</strong>
                             {interaccion.recomendaciones.map((rec, index) => (
                               <div key={index} className="mt-2 p-2 bg-white rounded border border-blue-100">
-                                <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
-                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                      rec.tipoManejo === 'EVITAR_ABSOLUTAMENTE' ? 'bg-red-100 text-red-700' :
-                                      rec.tipoManejo === 'AJUSTE_DOSIS' ? 'bg-yellow-100 text-yellow-700' :
-                                      rec.tipoManejo === 'MONITORIZACION_CERCANA' ? 'bg-orange-100 text-orange-700' :
-                                      rec.tipoManejo === 'ESPACIAR_ADMINISTRACION' ? 'bg-blue-100 text-blue-700' :
-                                      rec.tipoManejo === 'EDUCAR_PACIENTE' ? 'bg-green-100 text-green-700' :
-                                      'bg-purple-100 text-purple-700'
-                                    }`}>
+                                    {getTipoManejoIcon(rec.tipoManejo)}
+                                    <span className="text-sm font-medium">
                                       {rec.tipoManejo === 'EVITAR_ABSOLUTAMENTE' ? 'EVITAR ABSOLUTAMENTE' :
                                        rec.tipoManejo === 'AJUSTE_DOSIS' ? 'AJUSTAR DOSIS' :
                                        rec.tipoManejo === 'MONITORIZACION_CERCANA' ? 'MONITORIZAR CERCANAMENTE' :
                                        rec.tipoManejo === 'ESPACIAR_ADMINISTRACION' ? 'ESPACIAR ADMINISTRACIÓN' :
                                        rec.tipoManejo === 'EDUCAR_PACIENTE' ? 'EDUCAR PACIENTE' :
-                                       'CONSULTAR ESPECIALISTA'}
+                                       rec.tipoManejo === 'CONSULTAR_ESPECIALISTA' ? 'CONSULTAR ESPECIALISTA' :
+                                       'MANEJO CLÍNICO'}
                                     </span>
-                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                      rec.prioridad === 'URGENTE' ? 'bg-red-600 text-white' :
-                                      rec.prioridad === 'IMPORTANTE' ? 'bg-yellow-600 text-white' :
-                                      'bg-gray-600 text-white'
-                                    }`}>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${getPrioridadColor(rec.prioridad)}`}>
                                       {rec.prioridad === 'URGENTE' ? 'URGENTE' :
                                        rec.prioridad === 'IMPORTANTE' ? 'IMPORTANTE' :
                                        'INFORMATIVO'}
                                     </span>
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    Responsable: {rec.responsable.replace('_', ' ')}
+                                    <span className="text-xs text-gray-500">
+                                      {rec.responsable.replace('_', ' ')}
+                                    </span>
                                   </div>
                                 </div>
                                 <div className="text-sm text-gray-700 mt-2">
@@ -515,24 +641,24 @@ export default function Home() {
                                 </div>
                                 {rec.tiempoAccion && (
                                   <div className="text-xs text-blue-600 mt-1">
-                                    <em>Tiempo:</em> {rec.tiempoAccion}
+                                    <em>⏰ Tiempo:</em> {rec.tiempoAccion}
                                   </div>
                                 )}
                                 {rec.parametrosMonitoreo && (
                                   <div className="text-xs text-green-600 mt-1">
-                                    <em>Monitorear:</em> {rec.parametrosMonitoreo}
+                                    <em>📊 Monitorear:</em> {rec.parametrosMonitoreo}
                                   </div>
                                 )}
                                 {rec.accionAlternativa && (
                                   <div className="text-xs text-purple-600 mt-1">
-                                    <em>Alternativa:</em> {rec.accionAlternativa}
+                                    <em>🔄 Alternativa:</em> {rec.accionAlternativa}
                                   </div>
                                 )}
                               </div>
                             ))}
                           </div>
                         )}
-                        
+
                         {/* Información adicional */}
                         <div className="mt-2 text-xs text-gray-500 space-y-1">
                           {interaccion.medicamentoA.codigoAtc && (
@@ -541,20 +667,8 @@ export default function Home() {
                           {interaccion.medicamentoB.codigoAtc && (
                             <div><em>ATC B:</em> {interaccion.medicamentoB.codigoAtc}</div>
                           )}
-                          {interaccion.medicamentoA.grupoTerapeutico && (
-                            <div><em>Grupo A:</em> {interaccion.medicamentoA.grupoTerapeutico}</div>
-                          )}
-                          {interaccion.medicamentoB.grupoTerapeutico && (
-                            <div><em>Grupo B:</em> {interaccion.medicamentoB.grupoTerapeutico}</div>
-                          )}
-                          {interaccion.medicamentoA.rutaMetabolica && (
-                            <div><em>Metabolismo A:</em> {interaccion.medicamentoA.rutaMetabolica}</div>
-                          )}
-                          {interaccion.medicamentoB.rutaMetabolica && (
-                            <div><em>Metabolismo B:</em> {interaccion.medicamentoB.rutaMetabolica}</div>
-                          )}
                           {interaccion.referenciaFuente && (
-                            <div><em>Fuente:</em> {interaccion.referenciaFuente}</div>
+                            <div><em>📚 Fuente:</em> {interaccion.referenciaFuente}</div>
                           )}
                         </div>
                         
@@ -577,11 +691,11 @@ export default function Home() {
           <Card className="bg-red-50 border-red-200">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <span className="font-semibold text-sm">Riesgo ALTO</span>
+                <div className="w-3 h-3 bg-red-600 rounded-full"></div>
+                <span className="font-semibold text-red-800">Riesgo ALTO (MAYOR)</span>
               </div>
               <p className="text-xs text-gray-600">
-                Interacciones que pueden causar daño grave o potencialmente mortal. Requiere atención médica inmediata.
+                Potencialmente mortal, daño irreversible. Requiere acción inmediata y hospitalización.
               </p>
             </CardContent>
           </Card>
@@ -589,11 +703,11 @@ export default function Home() {
           <Card className="bg-yellow-50 border-yellow-200">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                <span className="font-semibold text-sm">Riesgo MODERADO</span>
+                <div className="w-3 h-3 bg-yellow-600 rounded-full"></div>
+                <span className="font-semibold text-yellow-800">Riesgo MODERADO</span>
               </div>
               <p className="text-xs text-gray-600">
-                Interacciones que pueden requerir monitoreo o ajuste de dosis. Consultar con profesional de salud.
+                Deterioro significativo pero reversible. Requiere ajuste de dosis o monitoreo cercano.
               </p>
             </CardContent>
           </Card>
@@ -601,11 +715,11 @@ export default function Home() {
           <Card className="bg-green-50 border-green-200">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="font-semibold text-sm">Riesgo BAJO</span>
+                <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+                <span className="font-semibold text-green-800">Riesgo BAJO (MENOR)</span>
               </div>
               <p className="text-xs text-gray-600">
-                Interacciones leves con efectos clínicos mínimos. Generalmente no requieren intervención.
+                Efectos mínimos manejables. Generalmente no requiere intervención específica.
               </p>
             </CardContent>
           </Card>
