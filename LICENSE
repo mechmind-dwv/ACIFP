@@ -1,0 +1,76 @@
+MIT License
+
+Copyright (c) 2024 ACIFP - Artefacto Web de Correlación de Interacciones Farmacológicas y Patologías
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## Clinical Disclaimer
+
+This software is designed as a clinical decision support tool and should be used as an aid to, not a substitute for, professional medical judgment.
+
+### Important Clinical Warnings:
+
+1. **Professional Judgment Required**: This system does not replace the clinical judgment of healthcare professionals.
+
+2. **Evidence-Based Limitations**: The system is based on available scientific evidence and may not include all possible drug interactions or patient-specific factors.
+
+3. **Regular Updates Required**: Medical knowledge evolves rapidly. Regular updates are essential for maintaining clinical accuracy.
+
+4. **Patient-Specific Factors**: Individual patient characteristics (genetics, comorbidities, allergies) may affect drug interaction risks.
+
+5. **Emergency Situations**: This tool is not intended for use in emergency medical situations.
+
+### Liability Limitations:
+
+- The authors and copyright holders assume no responsibility for clinical decisions made using this software.
+- Healthcare professionals must verify all information independently.
+- Patient safety remains the sole responsibility of the treating healthcare provider.
+
+### Clinical Validation:
+
+Users should:
+- Cross-reference recommendations with current clinical guidelines
+- Consider individual patient circumstances
+- Consult appropriate specialists when needed
+- Document clinical decision-making processes
+
+---
+
+## Attribution Requirements
+
+When using or modifying this software:
+
+1. **Maintain Copyright Notices**: Preserve all copyright and license notices.
+2. **Include Attribution**: Credit the original ACIFP project in derivative works.
+3. **Clinical Contributions**: Clearly document any clinical data modifications with evidence sources.
+4. **Disclaimer Inclusion**: Include appropriate medical disclaimers in distributed versions.
+
+## Support and Collaboration
+
+For clinical collaboration, support, or questions:
+
+- **Clinical**: clinical@acifp.org
+- **Technical**: dev@acifp.org
+- **Security**: security@acifp.org
+
+---
+
+*This license balances open-source collaboration with the critical responsibility of medical software development.*
