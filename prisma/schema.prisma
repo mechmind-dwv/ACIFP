@@ -1,0 +1,130 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Medicamento {
+  id                String   @id @default(cuid())
+  nombreGenerico     String   @unique
+  codigoAtc          String?  // Código de Clasificación Química, Terapéutica y Anatómica
+  grupoTerapeutico   String?  // Categoría principal (Ej: Anticoagulante, Analgésico)
+  rutaMetabolica     String?  // Enzima CYP principal involucrada
+  nombreComercial    String?
+  descripcion        String?
+  viaAdministracion  String?
+  dosisRecomendada   String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  // Relaciones
+  interaccionesComoPrincipal InteraccionMaestra[] @relation("MedicamentoPrincipal")
+  interaccionesComoSecundario InteraccionMaestra[] @relation("MedicamentoSecundario")
+}
+
+model InteraccionMaestra {
+  id                    String   @id @default(cuid())
+  medicamentoPrincipalId  String
+  medicamentoSecundarioId String
+  gravedad              GravedadClinica // 'ALTA_MAYOR', 'MODERADA', 'BAJA_MENOR'
+  mecanismoAccion       String   // Explicación de cómo interactúan
+  accionResultante      String   // El efecto farmacológico directo
+  consecuenciaPotencial  String   // Consecuencia clínica específica
+  referenciaFuente      String?  // Fuente de la información (Ej: FDA, DrugBank ID)
+  nivelEvidencia        NivelEvidencia? // Nivel de evidencia científica
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relaciones
+  medicamentoPrincipal   Medicamento @relation("MedicamentoPrincipal", fields: [medicamentoPrincipalId], references: [id], onDelete: Cascade)
+  medicamentoSecundario  Medicamento @relation("MedicamentoSecundario", fields: [medicamentoSecundarioId], references: [id], onDelete: Cascade)
+  
+  // Relaciones 1:N
+  patologiasCorrelacionadas PatologiaCorrelacionada[]
+  recomendaciones          Recomendacion[]
+  
+  @@unique([medicamentoPrincipalId, medicamentoSecundarioId])
+}
+
+model PatologiaCorrelacionada {
+  id                    String   @id @default(cuid())
+  interaccionId          String
+  nombrePatologia        String   // Nombre de la condición o enfermedad
+  manifestacionClinica   String?  // Síntomas o hallazgos clave
+  incidenciaEstimada     String?  // Frecuencia de aparición (Ej: Raro, Común)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relación
+  interaccion            InteraccionMaestra @relation(fields: [interaccionId], references: [id], onDelete: Cascade)
+}
+
+model Recomendacion {
+  id                    String   @id @default(cuid())
+  interaccionId          String
+  tipoManejo            TipoManejoClinico // 'EVITAR_ABSOLUTAMENTE', 'AJUSTE_DOSIS', 'MONITORIZACION_CERCANA', 'ESPACIAR_ADMINISTRACION'
+  prioridad             PrioridadRecomendacion // 'URGENTE', 'IMPORTANTE', 'INFORMATIVO'
+  detalleRecomendacion  String   // Instrucción prescriptiva clara
+  responsable           ResponsableAccion // 'MEDICO', 'FARMACEUTICO', 'PACIENTE', 'SISTEMA_SALUD'
+  tiempoAccion          String?  // Ej: "Inmediato", "24-48 horas", "Semanal"
+  parametrosMonitoreo   String?  // Parámetros específicos a monitorear
+  accionAlternativa     String?  // Alternativas terapéuticas
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relación
+  interaccion            InteraccionMaestra @relation(fields: [interaccionId], references: [id], onDelete: Cascade)
+}
+
+model PatologiaPreexistente {
+  id          String   @id @default(cuid())
+  nombre      String   @unique
+  descripcion String?
+  categoria   String?  // "Cardiovascular", "Renal", "Hepático", etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum GravedadClinica {
+  ALTA_MAYOR    // 🔴 Riesgo potencialmente mortal, daño irreversible
+  MODERADA      // 🟡 Deterioro significativo pero reversible
+  BAJA_MENOR    // 🟢 Efectos mínimos, manejables
+}
+
+enum TipoManejoClinico {
+  EVITAR_ABSOLUTAMENTE     // Evitar completamente la combinación
+  AJUSTE_DOSIS             // Modificar dosis de uno o ambos fármacos
+  MONITORIZACION_CERCANA    // Vigilancia estrecha de parámetros
+  ESPACIAR_ADMINISTRACION    // Separar horarios de administración
+  EDUCAR_PACIENTE         // Informar al paciente sobre síntomas
+  CONSULTAR_ESPECIALISTA    // Derivar a especialista
+}
+
+enum PrioridadRecomendacion {
+  URGENTE        // Requiere acción inmediata
+  IMPORTANTE     // Requiere acción pronto
+  INFORMATIVO    // Información para conocimiento
+}
+
+enum ResponsableAccion {
+  MEDICO           // Responsabilidad del médico tratante
+  FARMACEUTICO     // Responsabilidad del farmacéutico
+  PACIENTE         // Responsabilidad del paciente
+  SISTEMA_SALUD    // Responsabilidad del sistema de salud
+}
+
+enum NivelEvidencia {
+  ENSAYO_CLINICO        // Ensayos controlados aleatorizados
+  ESTUDIO_COHORTE        // Estudios de cohorte, casos y controles
+  REPORTE_CASOS         // Reportes de casos, series de casos
+  OPINION_EXPERTOS       // Consensos, guías clínicas
+}
