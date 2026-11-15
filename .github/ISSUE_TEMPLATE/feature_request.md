@@ -1,8 +1,8 @@
 ---
 name: Feature Request
 about: Suggest an idea for ACIFP
-title: '[FEATURE] '
-labels: 'enhancement/'
+title: "[FEATURE] "
+labels: ''
 assignees: ''
 
 ---
